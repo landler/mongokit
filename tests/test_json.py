@@ -297,6 +297,56 @@ class JsonTestCase(unittest.TestCase):
         assert mydoc == {'_id': 'mydoc2', 'bla': {'foo': 'bar', 'bar': 42, "egg":datetime.datetime(2000, 1, 1, 0, 0)}, 'spam': [datetime.datetime(2000, 1, 1, 0, 0), datetime.datetime(2008, 8, 8, 0, 0)]}, mydoc
         assert mydoc.collection == self.col
  
+    def test_date_from_json1(self):
+        class MyDoc(Document):
+            structure = {
+                "bla":{
+                    "foo":unicode,
+                    "bar":int,
+                    "egg":datetime.datetime,
+                },
+                "spam":[datetime.datetime],
+            }
+        self.connection.register([MyDoc])
+        json = '{"_id": "mydoc2", "bla": {"foo": "bar", "bar": 42, "egg":{"$date":946684800000}}, "spam": [946684800000, 1218153600000]}'
+        mydoc = self.col.MyDoc.from_json(json)
+        assert mydoc == {'_id': 'mydoc2', 'bla': {'foo': 'bar', 'bar': 42, "egg":datetime.datetime(2000, 1, 1, 0, 0)}, 'spam': [datetime.datetime(2000, 1, 1, 0, 0), datetime.datetime(2008, 8, 8, 0, 0)]}, mydoc
+        assert mydoc.collection == self.col
+
+
+    def test_date_from_json2(self):
+        class MyDoc(Document):
+            structure = {
+                "bla":{
+                    "foo":unicode,
+                    "bar":int,
+                    "egg":datetime.datetime,
+                },
+                "spam":[datetime.datetime],
+            }
+        self.connection.register([MyDoc])
+        json = '{"_id": "mydoc2", "bla": {"foo": "bar", "bar": 42, "egg":{"$date":{"$numberLong": 946684800000}}}, "spam": [946684800000, 1218153600000]}'
+        mydoc = self.col.MyDoc.from_json(json)
+        assert mydoc == {'_id': 'mydoc2', 'bla': {'foo': 'bar', 'bar': 42, "egg":datetime.datetime(2000, 1, 1, 0, 0)}, 'spam': [datetime.datetime(2000, 1, 1, 0, 0), datetime.datetime(2008, 8, 8, 0, 0)]}, mydoc
+        assert mydoc.collection == self.col
+
+    def test_date_from_json3(self):
+        class MyDoc(Document):
+            structure = {
+                "bla":{
+                    "foo":unicode,
+                    "bar":int,
+                    "egg":datetime.datetime,
+                },
+                "spam":[datetime.datetime],
+            }
+        self.connection.register([MyDoc])
+        json = '{"_id": "mydoc2", "bla": {"foo": "bar", "bar": 42, "egg":{"$date":"2000-01-01T00:00:00.000-0000"}}, "spam": [946684800000, 1218153600000]}'
+        mydoc = self.col.MyDoc.from_json(json)
+        from bson.tz_util import utc
+        assert mydoc == {'_id': 'mydoc2', 'bla': {'foo': 'bar', 'bar': 42, "egg":datetime.datetime(2000, 1, 1, 0, 0).replace(tzinfo=utc)}, 'spam': [datetime.datetime(2000, 1, 1, 0, 0), datetime.datetime(2008, 8, 8, 0, 0)]}, mydoc
+        assert mydoc.collection == self.col
+
     def test_from_json_embeded_doc(self):
         class EmbedDoc(Document):
             structure = {

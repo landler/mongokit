@@ -44,6 +44,8 @@ from bson.binary import Binary
 from bson.code import Code
 from bson.dbref import DBRef
 from bson.objectid import ObjectId
+from bson.tz_util import utc
+import collections
 import re
 from copy import deepcopy
 from uuid import UUID, uuid4
@@ -583,7 +585,32 @@ class Document(SchemaDocument):
                                 for obj in doc[key]:
                                     _convert_to_python(obj, struct[key][0], new_path, root_path)
                 elif struct[key] is datetime.datetime and doc[key] is not None:
-                    doc[key] = fromtimestamp(doc[key])
+                    #2.6 and newer
+                    if isinstance(doc[key], collections.Mapping) and '$date' in doc[key]:
+                        if isinstance(doc[key]['$date'], basestring):
+                            #import pdb;pdb.set_trace();
+                            aware = datetime.datetime.strptime(
+                                doc[key]["$date"][:23], "%Y-%m-%dT%H:%M:%S.%f").replace(tzinfo=utc)
+                            offset = doc[key]["$date"][23:]
+                            if not offset:
+                                # No offset, assume UTC.
+                                doc[key] = aware
+                            elif len(offset) == 5:
+                                # Offset from mongoexport is in format (+|-)HHMM
+                                secs = (int(offset[1:3]) * 3600 + int(offset[3:]) * 60)
+                                if offset[0] == "-":
+                                    secs *= -1
+                                doc[key] = aware - datetime.timedelta(seconds=secs)
+                            else:
+                                # Some other tool created this, or mongoexport changed again?
+                                raise ValueError("invalid format for offset")
+                        elif(isinstance(doc[key]['$date'], collections.Mapping) and '$numberLong' in doc[key]['$date']):
+                            doc[key] = fromtimestamp(float(doc[key]["$date"]["$numberLong"]))
+                        else:
+                            doc[key] = fromtimestamp(float(doc[key]["$date"]))
+                    # mongoexport before 2.6
+                    else:
+                        doc[key] = fromtimestamp(doc[key])
                 elif (isinstance(struct[key], R) or isinstance(struct[key],
                                                                DocumentProperties)) and doc[key] is not None:
                     db = doc[key].get('_database') or doc[key].get('$db')
