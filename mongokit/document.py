@@ -584,8 +584,6 @@ class Document(SchemaDocument):
                             if doc[key]:
                                 for obj in doc[key]:
                                     _convert_to_python(obj, struct[key][0], new_path, root_path)
-                elif struct[key] is ObjectId and doc[key] is not None:
-                    doc[key] = ObjectId(doc[key]['$oid'])
                 elif struct[key] is datetime.datetime and doc[key] is not None:
                     #2.6 and newer
                     if isinstance(doc[key], collections.Mapping) and '$date' in doc[key]:
